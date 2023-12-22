@@ -1,0 +1,274 @@
+-----
+title: "Лабораторная работа №4"
+author: Сысоев Г.А.
+format:
+    md:
+        output-file: readme.md
+    
+editor: visual
+-----
+
+
+## Цель работы
+
+1.  Закрепить практические навыки использования языка программирования R
+    для обработки данных.
+
+2.  Закрепить знания основных функций обработки данных экосистемы
+    tidyverse языка R.
+
+3.  Закрепить навыки исследования метаданных DNS трафика.
+
+## Задание
+
+Используя программный пакет dplyr, освоить анализ DNS логов с помощью
+языка программирования R.
+
+## Ход работы
+
+### Подготовка данных
+
+1\. Импортируйте данные DNS.
+
+```{r}
+library(readr)
+```
+
+    Warning: пакет 'readr' был собран под R версии 4.3.2
+
+```{r}
+header <- read.csv("C:/Work/header.csv")
+```
+
+```{r}
+header
+```
+                                                                                                    Field       Type                                                                                     Description
+1           ts       time                                                                    Timestamp of the DNS request 
+2          uid      string                                                                    Unique id of the connection 
+3           id      recor                                                ID record with orig/resp host/port. See conn.log 
+4                       d                                                                                                 
+5        proto       proto                                                       Protocol of DNS transaction – TCP or UDP 
+6     trans_id       count                                      16 bit identifier assigned by DNS client; responses match 
+7        query      string                                                               Domain name subject of the query 
+8       qclass       count                                                               Value specifying the query class 
+9  qclass_name      string                                          Descriptive name of the query class (e.g. C_INTERNET) 
+10       qtype       count                                                                Value specifying the query type 
+11  qtype_name      string                                                     Name of the query type (e.g. A, AAAA, PTR) 
+12       rcode       count                                                        Response code value in the DNS response 
+13  rcode_name      string                                 Descriptive name of the response code (e.g. NOERROR, NXDOMAIN) 
+14          QR       bool                                         Was this a query or a response? T = response, F = query 
+15          AA       bool                                     Authoritative Answer. T = server is authoritative for query 
+16       TC RD  bool bool  Truncation. T = message was truncated Recursion Desired. T = request recursive lookup of query 
+17          RA       bool                                      Recursion Available. T = server supports recursive queries 
+18           Z       count                                      Reserved field, should be zero in all queries & responses 
+19     answers      vector                                           List of resource descriptions in answer to the query 
+20        TTLs      vector                                                               Caching intervals of the answers 
+21    rejected       bool                                                Whether the DNS query was rejected by the server  by the server 
+
+
+Для чтения логов продублируем первую строку файла, чтобы она не терялась
+в названии столбцов.
+
+```{r}
+dns <- read.csv('C:/Work/dns.log',sep ='\t')
+```
+
+```{r}
+dns %>% head(10)
+```
+       `1331901005.510000` CWGtK431H9XuaTN4fi `192.168.202.100` `45658`
+                     <dbl> <chr>              <chr>               <dbl>
+     1         1331901015. C36a282Jljz7BsbGH  192.168.202.76        137
+     2         1331901016. C36a282Jljz7BsbGH  192.168.202.76        137
+     3         1331901017. C36a282Jljz7BsbGH  192.168.202.76        137
+     4         1331901006. C36a282Jljz7BsbGH  192.168.202.76        137
+     5         1331901007. C36a282Jljz7BsbGH  192.168.202.76        137
+     6         1331901007. C36a282Jljz7BsbGH  192.168.202.76        137
+     7         1331901006. ClEZCt3GLkJdtGGmAa 192.168.202.89        137
+     8         1331901007. ClEZCt3GLkJdtGGmAa 192.168.202.89        137
+     9         1331901008. ClEZCt3GLkJdtGGmAa 192.168.202.89        137
+    10         1331901007. CpD4i41jyaYqmTBMH3 192.168.202.89        137
+
+
+## Задание 2
+
+### Добавьте пропущенные данные о структуре данных (назначении столбцов)
+
+```{r}
+names(dns) <- c("ts", "uid", "id_or_h", "or_p", "id_re_h", "re_p","proto", "trans_id","query","qclass", "qclass_name", "qtype", "qtype_name", "rcode","rcode_name", "AA", "TC","RD","RA","Z","answer","TTLs","rejected")
+```
+
+## Задание 3
+
+### Преобразуйте данные в столбцах в нужный формат
+
+### Наши данные уже и так в подходящем формате. Ниже описано два способа преобразование формата
+
+```{r}
+transform(dns, ts = as.ts(ts)) #dns*t**s* \<  − *d**n**s*ts %\>%
+as.ts()
+```
+
+## Задание 4
+
+### Просмотрите общую структуру данных с помощью функции glimpse()
+
+```{r}
+glimpse(dns)
+```
+
+    Rows: 427,934
+    Columns: 23
+    $ ts          <dbl> 1331901015, 1331901016, 1331901017, 1331901006, 1331901007…
+    $ uid         <chr> "C36a282Jljz7BsbGH", "C36a282Jljz7BsbGH", "C36a282Jljz7Bsb…
+    $ id_or_h     <chr> "192.168.202.76", "192.168.202.76", "192.168.202.76", "192…
+    $ or_p        <dbl> 137, 137, 137, 137, 137, 137, 137, 137, 137, 137, 137, 137…
+    $ id_re_h     <chr> "192.168.202.255", "192.168.202.255", "192.168.202.255", "…
+    $ re_p        <dbl> 137, 137, 137, 137, 137, 137, 137, 137, 137, 137, 137, 137…
+    $ proto       <chr> "udp", "udp", "udp", "udp", "udp", "udp", "udp", "udp", "u…
+    $ trans_id    <dbl> 57402, 57402, 57402, 57398, 57398, 57398, 62187, 62187, 62…
+    $ query       <chr> "HPE8AA67", "HPE8AA67", "HPE8AA67", "WPAD", "WPAD", "WPAD"…
+    $ qclass      <chr> "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1", "1"…
+    $ qclass_name <chr> "C_INTERNET", "C_INTERNET", "C_INTERNET", "C_INTERNET", "C…
+    $ qtype       <chr> "32", "32", "32", "32", "32", "32", "32", "32", "32", "33"…
+    $ qtype_name  <chr> "NB", "NB", "NB", "NB", "NB", "NB", "NB", "NB", "NB", "SRV…
+    $ rcode       <chr> "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"…
+    $ rcode_name  <chr> "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"…
+    $ AA          <lgl> FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FA…
+    $ TC          <lgl> FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FA…
+    $ RD          <lgl> TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALS…
+    $ RA          <lgl> FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FA…
+    $ Z           <dbl> 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0…
+    $ answer      <chr> "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"…
+    $ TTLs        <chr> "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"…
+    $ rejected    <lgl> FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FA…
+
+## Задание 5
+
+### Сколько участников информационного обмена в сети Доброй Организации?
+
+### Если речь идет о кол-ве всевозможных пользователей
+
+```{r}
+select(dns,uid) %>% group_by(uid) %>% count() %>% nrow()
+```
+
+[1] 162495
+
+
+## Задание 6
+
+### Какое соотношение участников обмена внутри сети и участников обращений к внешним ресурсам?
+
+```{r}
+x <- filter(dns, qtype_name == 'A'| qtype_name == 'AA' | qtype_name =='AAA' | qtype_name == 'AAAA') %>% group_by(uid) %>% count() %>% nrow() 
+y <- filter(dns, qtype_name != 'A' & qtype_name !='AA' & qtype_name !='AAA' & qtype_name !='AAAA') %>% group_by(uid) %>% count() %>% nrow()
+y/x
+```
+
+[1] 0.5084645
+
+
+## Задание 7
+
+### Найдите топ-10 участников сети, проявляющих наибольшую сетевую активность.
+
+```{r}
+select(dns,uid) %>% group_by(uid) %>% count() %>% arrange(desc(n)) %>% head(10)
+```
+# A tibble: 10 × 2
+    # Groups:   uid [10]
+       uid                    n
+       <chr>              <int>
+     1 CHwsqo48JzsgOOx5u5 18622
+     2 C69INN8eedNqxIAs2   9082
+     3 CQX0cW23Ci1D08eA78  8914
+     4 CM87gu1xIgp1q0nWej  8101
+     5 CzNRck2zqMl2K4BvIh  7724
+     6 CFHJkD5qSIAnIDAnb   6140
+     7 CrASxG4WWqN5lFYZpd  5403
+     8 Cvfa4A2CK3vpoyJO9   4621
+     9 CZ6P023bXFwrV0Waxj  2829
+    10 Cq7OOsGzpAIeJK3x7   2318
+
+
+## Задание 8
+
+### Найдите топ-10 доменов, к которым обращаются пользователи сети и соответственное количество обращений
+
+```{r}
+dns %>% filter(query !='-', qtype_name == 'A'| qtype_name == 'AA' | qtype_name =='AAA' | qtype_name == 'AAAA') %>% select(query) %>% group_by(query) %>% count() %>% arrange(desc(n)) %>% head(10)
+```
+# A tibble: 10 × 2
+    # Groups:   query [10]
+       query                               n
+       <chr>                           <int>
+     1 teredo.ipv6.microsoft.com       39273
+     2 tools.google.com                14057
+     3 www.apple.com                   13390
+     4 safebrowsing.clients.google.com 11658
+     5 imap.gmail.com                   5543
+     6 stats.norton.com                 5537
+     7 www.google.com                   5171
+     8 ratings-wrs.symantec.com         4464
+     9 api.twitter.com                  4348
+    10 api.facebook.com                 4137
+
+
+## Задание 9
+
+### Определите базовые статистические характеристики (функция summary()) интервала времени между последовательным обращениями к топ-10 доменам.
+
+```{r}
+summary(diff((dns %>% filter(tolower(query) %in% mostpopdomains$query) %>% arrange(ts))$ts))
+```
+        Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+        0.00     0.00     0.00     1.08     0.31 49924.53 
+
+
+## Задание 10
+
+### Часто вредоносное программное обеспечение использует DNS канал в качестве канала управления, периодически отправляя запросы на подконтрольный злоумышленникам DNS сервер. По периодическим запросам на один и тот же домен можно выявить скрытый DNS канал. Есть ли такие IP адреса в исследуемом датасете?
+
+```{r}
+suspicious <- dns %>% group_by(id_or_h, query) %>% summarise(total = n()) %>% filter(total > 1)
+```
+`summarise()` has grouped output by 'id_or_h'. You can override using the
+    `.groups` argument.
+
+
+```{r}
+unique(suspicious$id_or_h)%>% head()
+```
+
+[1] "10.10.10.10"     "10.10.117.209"   "10.10.117.210"   "128.244.37.196"  "169.254.109.123" "169.254.228.26"
+
+
+## Задание 11
+
+### Определите местоположение (страну, город) и организацию-провайдера для топ-10 доменов. Для этого можно использовать сторонние сервисы, например https://v4.ifconfig.co.
+
+### teredo.ipv6.microsoft.com - United States, Redmond, Microsoft Corporation
+
+### tools.google.com - United States, Mountain View, Google
+
+### www.apple.com - Germany, Frankfurt, Akamai techonologies
+
+### safebrowsing.clients.google.com - United States, Mountain View, Google
+
+### imap.gmail.com - United States, Iston, Google LLC
+
+### stats.norton.com - GreatBritain, Washington, Microsoft Corporation
+
+### www.google.com - Unites States, Mountain View, Google
+
+### ratings-wrs.symantec.com - United States, Redmond, Microsoft Corporation
+
+### api.twitter.com - United States, San Francisco, Twitter inc
+
+### api.facebook.com - Unites States, Menlo Park, Facebook inc
+
+## Вывод
+
+### Закрепил навыки исследования метаданных DNS файла с помощью бибилиотеки dplyr
